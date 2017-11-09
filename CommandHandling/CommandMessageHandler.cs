@@ -117,159 +117,222 @@ namespace SimpleEchoBot.CommandHandling
                 string commandMessage = ExtractCleanCommandMessage(activity);
                 Party senderParty = MessagingUtils.CreateSenderParty(activity);
 
-                switch (commandMessage.ToLower())
+
+                if (commandMessage.ToLower().StartsWith(Commands.CommandListOptions))
                 {
-                    case string command when (command.StartsWith(Commands.CommandListOptions)):
-                        // Present all command options in a card
-                        replyActivity = CreateCommandOptionsCard(activity);
-                        wasHandled = true;
-                        break;
-
-                    case string command when (command.StartsWith(Commands.CommandAddAggregationChannel)):
-                        // Establish the sender's channel/conversation as an aggreated one if not already exists
-                        Party aggregationParty = new Party(activity.ServiceUrl, activity.ChannelId, null, activity.Conversation);
-
-                        if (_messageRouterManager.RoutingDataManager.AddAggregationParty(aggregationParty))
-                        {
-                            replyActivity = activity.CreateReply("This channel/conversation is now where the requests are aggregated");
-                        }
-                        else
-                        {
-                            replyActivity = activity.CreateReply("This channel/conversation is already receiving requests");
-                        }
-
-                        wasHandled = true;
-                        break;
-
-                    case string command when (command.StartsWith(Commands.CommandAcceptRequest) || command.StartsWith(Commands.CommandRejectRequest)):
-                        // Accept/reject conversation request
-                        bool doAccept = command.StartsWith(Commands.CommandAcceptRequest);
-
-                        if (_messageRouterManager.RoutingDataManager.IsAssociatedWithAggregation(senderParty))
-                        {
-                            // The party is associated with the aggregation and has the right to accept/reject
-                            string errorMessage = await AcceptOrRejectRequestAsync(senderParty, commandMessage, doAccept);
-                            
-                            if (!string.IsNullOrEmpty(errorMessage))
-                            {
-                                replyActivity = activity.CreateReply(errorMessage);
-                            }
-                        }
-                        else
-                        {
-                            replyActivity = activity.CreateReply("Sorry, you are not allowed to accept/reject requests");
-                        }
-
-                        wasHandled = true;
-                        break;
-
-                    case string command when (command.StartsWith(Commands.CommandDisconnect)):
-                        // End the 1:1 conversation
-                        IList<MessageRouterResult> messageRouterResults = _messageRouterManager.Disconnect(senderParty);
-
-                        foreach (MessageRouterResult messageRouterResult in messageRouterResults)
-                        {
-                            await _messageRouterResultHandler.HandleResultAsync(messageRouterResult);
-                        }
-
-                        wasHandled = true;
-                        break;
-
-
-                    #region Implementation of debugging commands
-#if DEBUG
-
-                    case string command when (command.StartsWith(Commands.CommandDeleteAllRoutingData)):
-                        // DELETE ALL ROUTING DATA
-                        await _messageRouterManager.BroadcastMessageToAggregationChannelsAsync(
-                            $"Deleting all data as requested by \"{senderParty.ChannelAccount?.Name}\"...");
-                        replyActivity = activity.CreateReply("Deleting all data...");
-                        _messageRouterManager.RoutingDataManager.DeleteAll();
-                        wasHandled = true;
-                        break;
-
-                    case string command when (command.StartsWith(Commands.CommandListAllParties)):
-                        // List user and bot parties
-                        IRoutingDataManager routingDataManager = _messageRouterManager.RoutingDataManager;
-                        string replyMessage = string.Empty;
-                        string partiesAsString = PartyListToString(routingDataManager.GetUserParties());
-
-                        if (string.IsNullOrEmpty(partiesAsString))
-                        {
-                            replyMessage = $"No user parties{LineBreak}";
-                        }
-                        else
-                        {
-                            replyMessage = $"Users:{LineBreak}{partiesAsString}";
-                        }
-
-                        partiesAsString = PartyListToString(routingDataManager.GetBotParties());
-
-                        if (string.IsNullOrEmpty(partiesAsString))
-                        {
-                            replyMessage += "No bot parties";
-                        }
-                        else
-                        {
-                            replyMessage += $"Bot:{LineBreak}{partiesAsString}";
-                        }
-
-                        replyActivity = activity.CreateReply(replyMessage);
-                        wasHandled = true;
-                        break;
-
-                    case string command when (command.StartsWith(Commands.CommandListPendingRequests)):
-                        // List all pending requests
-                        var attachments = new List<Attachment>();
-                            
-                        foreach (Party party in _messageRouterManager.RoutingDataManager.GetPendingRequests())
-                        {
-                            attachments.Add(CreateRequestCard(party, activity.Recipient.Name));
-                        }
-
-                        if (attachments.Count > 0)
-                        {
-                            replyActivity = activity.CreateReply($"{attachments.Count} pending request(s) found:");
-                            replyActivity.AttachmentLayout = AttachmentLayoutTypes.Carousel;
-                            replyActivity.Attachments = attachments;
-                        }
-                        else
-                        {
-                            replyActivity = activity.CreateReply("No pending requests");
-                        }
-
-                        wasHandled = true;
-                        break;
-
-                    case string command when (command.StartsWith(Commands.CommandListConnections)):
-                        // List all connections (conversations)
-                        string parties = _messageRouterManager.RoutingDataManager.ConnectionsToString();
-
-                        if (string.IsNullOrEmpty(parties))
-                        {
-                            replyActivity = activity.CreateReply("No conversations");
-                        }
-                        else
-                        {
-                            replyActivity = activity.CreateReply(parties);
-                        }
-
-                        wasHandled = true;
-                        break;
-
-                    case string command when (command.StartsWith(Commands.CommandListLastMessageRouterResults)):
-                        // List all logged message router results
-                        string resultsAsString = _messageRouterManager.RoutingDataManager.GetLastMessageRouterResults();
-                        replyActivity = activity.CreateReply($"{(string.IsNullOrEmpty(resultsAsString) ? "No results" : resultsAsString)}");
-                        wasHandled = true;
-                        break;
-#endif
-                    #endregion
-
-                    default:
-                        replyActivity = activity.CreateReply($"Command \"{commandMessage}\" not recognized");
-                        break;
+                    // Present all command options in a card
+                    replyActivity = CreateCommandOptionsCard(activity);
+                    wasHandled = true;
                 }
+                else if (commandMessage.ToLower().StartsWith(Commands.CommandAddAggregationChannel))
+                {
+                    // Establish the sender's channel/conversation as an aggreated one if not already exists
+                    Party aggregationParty = new Party(activity.ServiceUrl, activity.ChannelId, null, activity.Conversation);
+
+                    if (_messageRouterManager.RoutingDataManager.AddAggregationParty(aggregationParty))
+                    {
+                        replyActivity = activity.CreateReply("This channel/conversation is now where the requests are aggregated");
+                    }
+                    else
+                    {
+                        replyActivity = activity.CreateReply("This channel/conversation is already receiving requests");
+                    }
+
+                    wasHandled = true;
+                }
+                else if (commandMessage.ToLower().StartsWith(Commands.CommandAcceptRequest) || commandMessage.ToLower().StartsWith(Commands.CommandRejectRequest))
+                {
+                    // Accept/reject conversation request
+                    bool doAccept = commandMessage.ToLower().StartsWith(Commands.CommandAcceptRequest);
+
+                    if (_messageRouterManager.RoutingDataManager.IsAssociatedWithAggregation(senderParty))
+                    {
+                        // The party is associated with the aggregation and has the right to accept/reject
+                        string errorMessage = await AcceptOrRejectRequestAsync(senderParty, commandMessage, doAccept);
+
+                        if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            replyActivity = activity.CreateReply(errorMessage);
+                        }
+                    }
+                    else
+                    {
+                        replyActivity = activity.CreateReply("Sorry, you are not allowed to accept/reject requests");
+                    }
+
+                    wasHandled = true;
+                }
+                else if (commandMessage.ToLower().StartsWith(Commands.CommandDisconnect))
+                {
+                    // End the 1:1 conversation
+                    IList<MessageRouterResult> messageRouterResults = _messageRouterManager.Disconnect(senderParty);
+
+                    foreach (MessageRouterResult messageRouterResult in messageRouterResults)
+                    {
+                        await _messageRouterResultHandler.HandleResultAsync(messageRouterResult);
+                    }
+
+                    wasHandled = true;
+                    
+                }
+                else
+                {
+                    replyActivity = activity.CreateReply($"Command \"{commandMessage}\" not recognized");
+                }
+
+//                switch (commandMessage.ToLower())
+//                {
+//                    case string command when (command.StartsWith(Commands.CommandListOptions)):
+//                        // Present all command options in a card
+//                        replyActivity = CreateCommandOptionsCard(activity);
+//                        wasHandled = true;
+//                        break;
+
+//                    case string command when (command.StartsWith(Commands.CommandAddAggregationChannel)):
+//                        // Establish the sender's channel/conversation as an aggreated one if not already exists
+//                        Party aggregationParty = new Party(activity.ServiceUrl, activity.ChannelId, null, activity.Conversation);
+
+//                        if (_messageRouterManager.RoutingDataManager.AddAggregationParty(aggregationParty))
+//                        {
+//                            replyActivity = activity.CreateReply("This channel/conversation is now where the requests are aggregated");
+//                        }
+//                        else
+//                        {
+//                            replyActivity = activity.CreateReply("This channel/conversation is already receiving requests");
+//                        }
+
+//                        wasHandled = true;
+//                        break;
+
+//                    case string command when (command.StartsWith(Commands.CommandAcceptRequest) || command.StartsWith(Commands.CommandRejectRequest)):
+//                        // Accept/reject conversation request
+//                        bool doAccept = command.StartsWith(Commands.CommandAcceptRequest);
+
+//                        if (_messageRouterManager.RoutingDataManager.IsAssociatedWithAggregation(senderParty))
+//                        {
+//                            // The party is associated with the aggregation and has the right to accept/reject
+//                            string errorMessage = await AcceptOrRejectRequestAsync(senderParty, commandMessage, doAccept);
+                            
+//                            if (!string.IsNullOrEmpty(errorMessage))
+//                            {
+//                                replyActivity = activity.CreateReply(errorMessage);
+//                            }
+//                        }
+//                        else
+//                        {
+//                            replyActivity = activity.CreateReply("Sorry, you are not allowed to accept/reject requests");
+//                        }
+
+//                        wasHandled = true;
+//                        break;
+
+//                    case string command when (command.StartsWith(Commands.CommandDisconnect)):
+//                        // End the 1:1 conversation
+//                        IList<MessageRouterResult> messageRouterResults = _messageRouterManager.Disconnect(senderParty);
+
+//                        foreach (MessageRouterResult messageRouterResult in messageRouterResults)
+//                        {
+//                            await _messageRouterResultHandler.HandleResultAsync(messageRouterResult);
+//                        }
+
+//                        wasHandled = true;
+//                        break;
+
+
+//                    #region Implementation of debugging commands
+//#if DEBUG
+
+//                    case string command when (command.StartsWith(Commands.CommandDeleteAllRoutingData)):
+//                        // DELETE ALL ROUTING DATA
+//                        await _messageRouterManager.BroadcastMessageToAggregationChannelsAsync(
+//                            $"Deleting all data as requested by \"{senderParty.ChannelAccount?.Name}\"...");
+//                        replyActivity = activity.CreateReply("Deleting all data...");
+//                        _messageRouterManager.RoutingDataManager.DeleteAll();
+//                        wasHandled = true;
+//                        break;
+
+//                    case string command when (command.StartsWith(Commands.CommandListAllParties)):
+//                        // List user and bot parties
+//                        IRoutingDataManager routingDataManager = _messageRouterManager.RoutingDataManager;
+//                        string replyMessage = string.Empty;
+//                        string partiesAsString = PartyListToString(routingDataManager.GetUserParties());
+
+//                        if (string.IsNullOrEmpty(partiesAsString))
+//                        {
+//                            replyMessage = $"No user parties{LineBreak}";
+//                        }
+//                        else
+//                        {
+//                            replyMessage = $"Users:{LineBreak}{partiesAsString}";
+//                        }
+
+//                        partiesAsString = PartyListToString(routingDataManager.GetBotParties());
+
+//                        if (string.IsNullOrEmpty(partiesAsString))
+//                        {
+//                            replyMessage += "No bot parties";
+//                        }
+//                        else
+//                        {
+//                            replyMessage += $"Bot:{LineBreak}{partiesAsString}";
+//                        }
+
+//                        replyActivity = activity.CreateReply(replyMessage);
+//                        wasHandled = true;
+//                        break;
+
+//                    case string command when (command.StartsWith(Commands.CommandListPendingRequests)):
+//                        // List all pending requests
+//                        var attachments = new List<Attachment>();
+                            
+//                        foreach (Party party in _messageRouterManager.RoutingDataManager.GetPendingRequests())
+//                        {
+//                            attachments.Add(CreateRequestCard(party, activity.Recipient.Name));
+//                        }
+
+//                        if (attachments.Count > 0)
+//                        {
+//                            replyActivity = activity.CreateReply($"{attachments.Count} pending request(s) found:");
+//                            replyActivity.AttachmentLayout = AttachmentLayoutTypes.Carousel;
+//                            replyActivity.Attachments = attachments;
+//                        }
+//                        else
+//                        {
+//                            replyActivity = activity.CreateReply("No pending requests");
+//                        }
+
+//                        wasHandled = true;
+//                        break;
+
+//                    case string command when (command.StartsWith(Commands.CommandListConnections)):
+//                        // List all connections (conversations)
+//                        string parties = _messageRouterManager.RoutingDataManager.ConnectionsToString();
+
+//                        if (string.IsNullOrEmpty(parties))
+//                        {
+//                            replyActivity = activity.CreateReply("No conversations");
+//                        }
+//                        else
+//                        {
+//                            replyActivity = activity.CreateReply(parties);
+//                        }
+
+//                        wasHandled = true;
+//                        break;
+
+//                    case string command when (command.StartsWith(Commands.CommandListLastMessageRouterResults)):
+//                        // List all logged message router results
+//                        string resultsAsString = _messageRouterManager.RoutingDataManager.GetLastMessageRouterResults();
+//                        replyActivity = activity.CreateReply($"{(string.IsNullOrEmpty(resultsAsString) ? "No results" : resultsAsString)}");
+//                        wasHandled = true;
+//                        break;
+//#endif
+//                    #endregion
+
+//                    default:
+//                        replyActivity = activity.CreateReply($"Command \"{commandMessage}\" not recognized");
+//                        break;
+//                }
 
                 if (replyActivity != null)
                 {

@@ -53,7 +53,11 @@ namespace SimpleEchoBot.CommandHandling
         /// <param name="partyKey">The key identifying the serialized party data. If null, the default value is used.</param>
         public BackChannelMessageHandler(IRoutingDataManager routingDataManager, string backChannelId = null, string partyKey = null)
         {
-            RoutingDataManager = routingDataManager ?? throw new ArgumentNullException("Routing data manager instance must be given");
+            if (routingDataManager == null)
+            {
+                throw new ArgumentNullException("Routing data manager instance must be given");
+            }
+            RoutingDataManager = routingDataManager;
 
             BackChannelId = string.IsNullOrEmpty(backChannelId) ? DefaultBackChannelId : backChannelId;
             PartyKey = string.IsNullOrEmpty(partyKey) ? DefaultPartyKey : partyKey;
