@@ -28,7 +28,3 @@ For first time publish after downloading source code
 ## Use continuous integration
 
 If you have setup continuous integration, then your bot will automatically deployed when new changes are pushed to the source repository.
-
-
-
-"# kenadams" 
