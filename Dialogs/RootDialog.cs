@@ -30,7 +30,7 @@ namespace SimpleEchoBot.Dialogs
         /// <returns></returns>
         private async Task OnMessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> result)
         {
-            IMessageActivity messageActivity = await result;
+            var messageActivity = await result;
             string message = messageActivity.Text;
 
             if (!string.IsNullOrEmpty(message))
@@ -48,6 +48,13 @@ namespace SimpleEchoBot.Dialogs
             }
 
             context.Done(this);
+        }
+
+        public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
+        {
+            var message = await argument;
+            await context.PostAsync("You said: " + message.Text);
+            context.Wait(MessageReceivedAsync);
         }
     }
 }
